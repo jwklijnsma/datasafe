@@ -46,9 +46,10 @@ jobs:
         run: |
           {
             docker version --format 'client {{.Client.Version}} / server {{.Server.Version}} (API {{.Server.APIVersion}})'
-            for image in minio/minio:RELEASE.2023-06-02T23-17-26Z quay.io/minio/minio:RELEASE.2023-06-02T23-17-26Z minio/minio:latest; do
+            for image in pgsty/minio:latest cgr.dev/chainguard/minio:latest bitnamilegacy/minio:2025.7.23 adobe/s3mock:latest chrislusf/seaweedfs:latest rustfs/rustfs:latest; do
               echo "--- docker pull $image"
               docker pull -q "$image" 2>&1 | tail -3 || true
+              docker image inspect "$image" --format 'entrypoint={{json .Config.Entrypoint}} cmd={{json .Config.Cmd}}' 2>/dev/null || true
             done
           } > docker-diag.txt 2>&1
           cat docker-diag.txt

@@ -90,7 +90,7 @@
         <compress.version>1.26.0</compress.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <deploy.disabled>false</deploy.disabled>
-        <testcontainers.version>1.18.3</testcontainers.version>
+        <testcontainers.version>1.21.4</testcontainers.version>
         <jacoco.version>0.8.11</jacoco.version>
         <commons.io.version>2.5</commons.io.version>
         <slf4j-simple.version>2.0.7</slf4j-simple.version>

@@ -26,12 +26,13 @@ import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
+import software.amazon.awssdk.services.s3.model.CompletedPart;
 
 import java.io.ByteArrayInputStream;
 import java.util.concurrent.Callable;
 
 @Slf4j
-public class UploadChunkResultCallable implements Callable<UploadPartResponse> {
+public class UploadChunkResultCallable implements Callable<CompletedPart> {
 
     private final S3Client s3;
 
@@ -63,7 +64,7 @@ public class UploadChunkResultCallable implements Callable<UploadPartResponse> {
     }
 
     @Override
-    public UploadPartResponse call() {
+    public CompletedPart call() {
         log.trace("Upload chunk result call with part: {}", partNumber);
         try {
             UploadPartRequest uploadPartRequest = UploadPartRequest.builder()
@@ -74,7 +75,15 @@ public class UploadChunkResultCallable implements Callable<UploadPartResponse> {
                     .contentLength((long) contentLength)
                     .build();
 
-            return s3.uploadPart(uploadPartRequest, RequestBody.fromBytes(content));
+            // only the first contentLength bytes of the buffer are part of this chunk
+            UploadPartResponse response = s3.uploadPart(uploadPartRequest,
+                    RequestBody.fromInputStream(new ByteArrayInputStream(content, 0, contentLength), contentLength));
+            // SDK v2 responses do not carry the part number; keep it with the ETag, because parts complete in
+            // any order when they are uploaded in parallel
+            return CompletedPart.builder()
+                    .partNumber(partNumber)
+                    .eTag(response.eTag())
+                    .build();
         } finally {
             // Release the memory, as the callable may still live inside the
             // CompletionService which would cause

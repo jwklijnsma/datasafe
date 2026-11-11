@@ -66,8 +66,8 @@ public class S3StorageService implements StorageService {
                 .prefix(prefix)
                 .build();
 
-        ListObjectsV2Response response = s3.listObjectsV2(request);
-        Stream<S3Object> objectStream = response.contents().stream();
+        // the paginator follows continuation tokens; a single listObjectsV2 call returns at most 1000 objects
+        Stream<S3Object> objectStream = s3.listObjectsV2Paginator(request).contents().stream();
         return objectStream
                 .map(os -> new AbsoluteLocation<>(
                         new BaseResolvedResource(

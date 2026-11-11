@@ -36,6 +36,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
@@ -56,7 +57,7 @@ public class MultipartUploadS3StorageOutputStream extends OutputStream {
     // The minimum size for a multi part request is 5 MB, hence the buffer size of 5 MB
     static final int BUFFER_SIZE = 1024 * 1024 * 5;
 
-    private final CompletionService<UploadPartResponse> completionService;
+    private final CompletionService<CompletedPart> completionService;
 
     private CustomizableByteArrayOutputStream currentOutputStream = newOutputStream();
 
@@ -282,14 +283,13 @@ public class MultipartUploadS3StorageOutputStream extends OutputStream {
     private List<CompletedPart> getMultiPartsUploadResults() throws ExecutionException, InterruptedException {
         List<CompletedPart> result = new ArrayList<>(partCounter);
         for (int i = 1; i <= partCounter; i++) {
-            UploadPartResponse completedPart = completionService.take().get();
-            result.add(CompletedPart.builder()
-                    .partNumber(i)
-                    .eTag(completedPart.eTag())
-                    .build());
+            CompletedPart completedPart = completionService.take().get();
+            result.add(completedPart);
 
-            log.debug("Get upload part #{} from {}", i, partCounter);
+            log.debug("Got upload part #{} ({} of {})", completedPart.partNumber(), i, partCounter);
         }
+        // parts complete in any order; S3 requires them in ascending part number order
+        result.sort(Comparator.comparing(CompletedPart::partNumber));
         return result;
     }
 

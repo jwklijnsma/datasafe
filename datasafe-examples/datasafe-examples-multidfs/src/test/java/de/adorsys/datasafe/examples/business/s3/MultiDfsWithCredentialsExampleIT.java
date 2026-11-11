@@ -225,7 +225,7 @@ class MultiDfsWithCredentialsExampleIT {
     }
 
     private static GenericContainer createAndStartMinio(String accessKey, String secretKey) {
-        GenericContainer minioContainer = new GenericContainer("minio/minio:RELEASE.2023-06-02T23-17-26Z")
+        GenericContainer minioContainer = new GenericContainer("pgsty/minio:latest")
                 .withExposedPorts(9000)
                 .withEnv("MINIO_ACCESS_KEY", accessKey)
                 .withEnv("MINIO_SECRET_KEY", secretKey)

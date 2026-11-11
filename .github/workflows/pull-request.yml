@@ -41,19 +41,6 @@ jobs:
         with:
           key: docker-${{ runner.os }}
 
-      - name: Docker diagnostics
-        if: matrix.source == 'this-branch'
-        run: |
-          {
-            docker version --format 'client {{.Client.Version}} / server {{.Server.Version}} (API {{.Server.APIVersion}})'
-            for image in pgsty/minio:latest cgr.dev/chainguard/minio:latest bitnamilegacy/minio:2025.7.23 adobe/s3mock:latest chrislusf/seaweedfs:latest rustfs/rustfs:latest; do
-              echo "--- docker pull $image"
-              docker pull -q "$image" 2>&1 | tail -3 || true
-              docker image inspect "$image" --format 'entrypoint={{json .Config.Entrypoint}} cmd={{json .Config.Cmd}}' 2>/dev/null || true
-            done
-          } > docker-diag.txt 2>&1
-          cat docker-diag.txt
-
       - name: Step 4 - Build & Test
         continue-on-error: ${{ matrix.source == 'upstream-develop' }}
         run: |
@@ -67,7 +54,6 @@ jobs:
             echo "### datasafe build (${{ matrix.source }})"
             echo
             echo '```'
-            if [ -f docker-diag.txt ]; then echo "--- docker diagnostics"; cat docker-diag.txt; echo "---"; fi
             grep -h -A6 "ContainerFetch\|Caused by" $(find . -path "*surefire-reports/*.txt" 2>/dev/null) 2>/dev/null | head -30 || true
             echo "SpotBugs findings: $(grep -cE '^\[ERROR\] (Low|Medium|High|Scary|Scariest|Troubling|Of Concern):' build.log || true)"
             grep -E "^\[ERROR\]|Tests run:.*(Failures: [1-9]|Errors: [1-9])|BUILD (SUCCESS|FAILURE)|Reactor Summary|SUCCESS \[|FAILURE \[|SKIPPED$" build.log \

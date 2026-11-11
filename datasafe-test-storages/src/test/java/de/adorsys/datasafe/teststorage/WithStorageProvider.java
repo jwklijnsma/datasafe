@@ -366,7 +366,7 @@ public abstract class WithStorageProvider extends BaseMockitoTest {
 
     private static void startMinio() {
         log.info("Starting MINIO");
-        minioContainer = new GenericContainer("minio/minio:RELEASE.2023-06-02T23-17-26Z")
+        minioContainer = new GenericContainer("pgsty/minio:latest")
                 .withExposedPorts(9000)
                 .withEnv("MINIO_ACCESS_KEY", minioAccessKeyID)
                 .withEnv("MINIO_SECRET_KEY", minioSecretAccessKey)

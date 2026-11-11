@@ -41,6 +41,18 @@ jobs:
         with:
           key: docker-${{ runner.os }}
 
+      - name: Docker diagnostics
+        if: matrix.source == 'this-branch'
+        run: |
+          {
+            docker version --format 'client {{.Client.Version}} / server {{.Server.Version}} (API {{.Server.APIVersion}})'
+            for image in minio/minio:RELEASE.2023-06-02T23-17-26Z quay.io/minio/minio:RELEASE.2023-06-02T23-17-26Z minio/minio:latest; do
+              echo "--- docker pull $image"
+              docker pull -q "$image" 2>&1 | tail -3 || true
+            done
+          } > docker-diag.txt 2>&1
+          cat docker-diag.txt
+
       - name: Step 4 - Build & Test
         continue-on-error: ${{ matrix.source == 'upstream-develop' }}
         run: |
@@ -54,6 +66,8 @@ jobs:
             echo "### datasafe build (${{ matrix.source }})"
             echo
             echo '```'
+            if [ -f docker-diag.txt ]; then echo "--- docker diagnostics"; cat docker-diag.txt; echo "---"; fi
+            grep -h -A6 "ContainerFetch\|Caused by" $(find . -path "*surefire-reports/*.txt" 2>/dev/null) 2>/dev/null | head -30 || true
             echo "SpotBugs findings: $(grep -cE '^\[ERROR\] (Low|Medium|High|Scary|Scariest|Troubling|Of Concern):' build.log || true)"
             grep -E "^\[ERROR\]|Tests run:.*(Failures: [1-9]|Errors: [1-9])|BUILD (SUCCESS|FAILURE)|Reactor Summary|SUCCESS \[|FAILURE \[|SKIPPED$" build.log \
               | grep -vE "^\[ERROR\] *$|^\[ERROR\] (Low|Medium|High|Scary|Scariest|Troubling|Of Concern):" | head -150 || true

@@ -3,7 +3,6 @@ package de.adorsys.datasafe.rest.impl.controller;
 import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
 import static org.springframework.http.MediaType.APPLICATION_OCTET_STREAM_VALUE;
 import static org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
 import de.adorsys.datasafe.business.impl.service.DefaultDatasafeServices;
 import de.adorsys.datasafe.encrypiton.api.types.UserID;
 import de.adorsys.datasafe.encrypiton.api.types.UserIDAuth;
@@ -33,6 +32,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 /**
  * User private space REST api.
@@ -122,7 +122,7 @@ public class DocumentController {
                     .toList();
             log.debug("List for path {} returned {} items", path, documentList.size());
             return documentList;
-        } catch (AmazonS3Exception e) { // for list this exception most likely means that user credentials wrong
+        } catch (S3Exception e) { // for list this exception most likely means that user credentials wrong
             throw new UnauthorizedException("Unauthorized", e);
         }
     }

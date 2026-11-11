@@ -1,6 +1,5 @@
 package de.adorsys.datasafe.examples.business.s3;
 
-import com.amazonaws.services.s3.AmazonS3;
 import dagger.Lazy;
 import de.adorsys.datasafe.business.impl.service.DaggerDefaultDatasafeServices;
 import de.adorsys.datasafe.business.impl.service.DefaultDatasafeServices;
@@ -26,6 +25,10 @@ import de.adorsys.datasafe.types.api.resource.BasePrivateResource;
 import de.adorsys.datasafe.types.api.resource.StorageIdentifier;
 import de.adorsys.datasafe.types.api.shared.AwsClientRetry;
 import de.adorsys.datasafe.types.api.utils.ExecutorServiceUtil;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
 
 import java.io.OutputStream;
 import java.net.URI;
@@ -65,7 +68,7 @@ class MultiDfsWithCredentialsExampleIT {
     private static final ExecutorService EXECUTOR = ExecutorServiceUtil.submitterExecutesOnStarvationExecutingService(4, 4);
 
     private static Map<MinioContainerId, GenericContainer> minios = new EnumMap<>(MinioContainerId.class);
-    private static AmazonS3 directoryClient = null;
+    private static S3Client directoryClient = null;
     private static Map<MinioContainerId, String> endpointsByHost = new HashMap<>();
 
     @BeforeAll
@@ -80,13 +83,12 @@ class MultiDfsWithCredentialsExampleIT {
             log.info("MINIO for {} is available at: {} with access: '{}'/'{}'", it, endpoint, it.getAccessKey(),
                     it.getSecretKey());
 
-            AmazonS3 client = S3ClientFactory.getClient(
-                    endpoint,
-                    REGION,
-                    it.getAccessKey(),
-                    it.getSecretKey()
-            );
-
+            S3Client client = S3Client.builder()
+                    .credentialsProvider(StaticCredentialsProvider.create(
+                            AwsBasicCredentials.create(it.getAccessKey(), it.getSecretKey())))
+                    .region(Region.of(REGION))
+                    .endpointOverride(URI.create(endpoint))
+                    .build();
             AwsClientRetry.createBucketWithRetry(client, it.getBucketName());
 
             if (it.equals(DIRECTORY_BUCKET)) {
@@ -223,10 +225,12 @@ class MultiDfsWithCredentialsExampleIT {
     }
 
     private static GenericContainer createAndStartMinio(String accessKey, String secretKey) {
-        GenericContainer minioContainer = new GenericContainer("minio/minio")
+        GenericContainer minioContainer = new GenericContainer("pgsty/minio:latest")
                 .withExposedPorts(9000)
                 .withEnv("MINIO_ACCESS_KEY", accessKey)
                 .withEnv("MINIO_SECRET_KEY", secretKey)
+                .withEnv("MINIO_ROOT_USER", accessKey)
+                .withEnv("MINIO_ROOT_PASSWORD", secretKey)
                 .withCommand("server /data")
                 .waitingFor(Wait.defaultWaitStrategy());
 

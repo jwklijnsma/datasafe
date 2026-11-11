@@ -20,7 +20,7 @@
         <asciidoctor-maven-plugin.version>2.2.4</asciidoctor-maven-plugin.version>
         <exec-maven-plugin.version>1.6.0</exec-maven-plugin.version>
         <spring.framework.security.version>6.3.1</spring.framework.security.version>
-        <spring.framework.version>6.1.10</spring.framework.version>
+        <spring.framework.version>6.1.21</spring.framework.version>
         <spring.framework.restdocs.version>3.0.0</spring.framework.restdocs.version>
         <tomcat.version>10.1.11</tomcat.version>
         <jakarta.validation-api.version>3.0.2</jakarta.validation-api.version>
@@ -193,14 +193,24 @@
             <version>${tomcat.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-s3</artifactId>
-            <version>${amazon.aws.version}</version>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-core</artifactId>
-            <version>${amazon.aws.version}</version>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>regions</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>auth</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>sdk-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>aws-core</artifactId>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
@@ -320,7 +330,7 @@
                         <version>${maven.dependency.plugin.version}</version>
                         <configuration>
                             <ignoredUsedUndeclaredDependencies>
-                                <ignoredUsedUndeclaredDependency>com.amazonaws</ignoredUsedUndeclaredDependency>
+                                <ignoredUsedUndeclaredDependency>software.amazon.awssdk</ignoredUsedUndeclaredDependency>
                                 <ignoredUsedUndeclaredDependency>org.springframework.security</ignoredUsedUndeclaredDependency>
                                 <ignoredUsedUndeclaredDependency>org.slf4j</ignoredUsedUndeclaredDependency>
                                 <ignoredUsedUndeclaredDependency>org.springframework.boot</ignoredUsedUndeclaredDependency>

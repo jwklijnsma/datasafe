@@ -1,7 +1,5 @@
 package de.adorsys.datasafe.business.impl.e2e;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
 import dagger.Lazy;
 import de.adorsys.datasafe.business.impl.service.DaggerDefaultDatasafeServices;
 import de.adorsys.datasafe.business.impl.service.DefaultDatasafeServices;
@@ -36,6 +34,10 @@ import de.adorsys.datasafe.types.api.types.ReadKeyPassword;
 import de.adorsys.datasafe.types.api.types.ReadStorePassword;
 import de.adorsys.datasafe.types.api.utils.ExecutorServiceUtil;
 import de.adorsys.datasafe.types.api.utils.ReadKeyPasswordTestFactory;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -95,12 +97,12 @@ class MultiDFSFunctionalityIT extends BaseMockitoTest {
     static void initDistributedMinios() {
         // Create all required minio-backed S3 buckets:
         Stream.of(CREDENTIALS, KEYSTORE, FILES_ONE, FILES_TWO, INBOX).forEach(it -> {
-            GenericContainer minio = new GenericContainer("minio/minio:RELEASE.2019-08-01T22-18-54Z")
-                    .withExposedPorts(9000)
-                    .withEnv("MINIO_ACCESS_KEY", accessKey(it))
-                    .withEnv("MINIO_SECRET_KEY", secretKey(it))
-                    .withCommand("server /data")
-                    .waitingFor(Wait.defaultWaitStrategy());
+            GenericContainer minio = new GenericContainer("minio/minio:RELEASE.2023-06-02T23-17-26Z")
+                .withExposedPorts(9000)
+                .withEnv("MINIO_ACCESS_KEY", accessKey(it))
+                .withEnv("MINIO_SECRET_KEY", secretKey(it))
+                .withCommand("server /data")
+                .waitingFor(Wait.defaultWaitStrategy());
             minio.start();
             minios.put(it, minio);
 
@@ -113,7 +115,7 @@ class MultiDFSFunctionalityIT extends BaseMockitoTest {
             log.info("ENDPOINT IS {}", endpoint);
             endpointsByHostNoBucket.put(it, endpoint);
 
-            AmazonS3 client = S3ClientFactory.getClient(
+            S3Client client = S3ClientFactory.getClient(
                     endpoint,
                     REGION,
                     accessKey(it),
@@ -293,18 +295,23 @@ class MultiDFSFunctionalityIT extends BaseMockitoTest {
     }
 
     private List<String> listInBucket(String bucket) {
-        return S3ClientFactory.getClient(
-                        endpointsByHostNoBucket.get(bucket),
-                        REGION,
-                        accessKey(bucket),
-                        secretKey(bucket)
-                )
-                .listObjects(bucket, "")
-                .getObjectSummaries()
+        S3Client s3 = S3ClientFactory.getClient(
+                endpointsByHostNoBucket.get(bucket),
+                REGION,
+                accessKey(bucket),
+                secretKey(bucket)
+        );
+        ListObjectsV2Request request = ListObjectsV2Request.builder()
+                .bucket(bucket)
+                .build();
+        ListObjectsV2Response response = s3.listObjectsV2(request);
+
+        return response.contents()
                 .stream()
-                .map(S3ObjectSummary::getKey)
+                .map(S3Object::key)
                 .collect(Collectors.toList());
     }
+
 
     @SneakyThrows
     private void writeToPrivate(UserIDAuth user, StorageIdentifier id, String path, String data) {

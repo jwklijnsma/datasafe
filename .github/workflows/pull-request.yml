@@ -54,7 +54,9 @@ jobs:
             echo "### datasafe build (${{ matrix.source }})"
             echo
             echo '```'
-            grep -E "^\[ERROR\]|Tests run:.*(Failures: [1-9]|Errors: [1-9])|BUILD (SUCCESS|FAILURE)|Reactor Summary|SUCCESS \[|FAILURE \[|SKIPPED$" build.log | grep -v "^\[ERROR\] *$" | head -150 || true
+            echo "SpotBugs findings: $(grep -cE '^\[ERROR\] (Low|Medium|High|Scary|Scariest|Troubling|Of Concern):' build.log || true)"
+            grep -E "^\[ERROR\]|Tests run:.*(Failures: [1-9]|Errors: [1-9])|BUILD (SUCCESS|FAILURE)|Reactor Summary|SUCCESS \[|FAILURE \[|SKIPPED$" build.log \
+              | grep -vE "^\[ERROR\] *$|^\[ERROR\] (Low|Medium|High|Scary|Scariest|Troubling|Of Concern):" | head -150 || true
             echo '```'
           } > build-summary.md
           cat build-summary.md >> "$GITHUB_STEP_SUMMARY"

@@ -5,12 +5,29 @@ on:
       - develop
       - master
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   pull-request-job:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - source: this-branch
+            ref: ''
+          # Unmodified upstream develop (adorsys/datasafe 28f411a) as a non-blocking baseline,
+          # to separate pre-existing failures from regressions introduced by the pull request.
+          - source: upstream-develop
+            ref: 28f411adddf060f81aa620685001455bd16c1e50
+    name: pull-request-job (${{ matrix.source }})
     steps:
       - name: Step 1 - Checkout repository code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.ref }}
 
       - name: Step 2 - Set up JDK 17
         uses: actions/setup-java@v4
@@ -25,9 +42,31 @@ jobs:
           key: docker-${{ runner.os }}
 
       - name: Step 4 - Build & Test
-        run: mvn clean verify -ntp -PIT
+        continue-on-error: ${{ matrix.source == 'upstream-develop' }}
+        run: |
+          set -o pipefail
+          mvn clean verify -ntp -PIT -fae 2>&1 | tee build.log
+
+      - name: Summarize build result
+        if: always()
+        run: |
+          {
+            echo "### datasafe build (${{ matrix.source }})"
+            echo
+            echo '```'
+            grep -E "^\[ERROR\]|Tests run:.*(Failures: [1-9]|Errors: [1-9])|BUILD (SUCCESS|FAILURE)|Reactor Summary|SUCCESS \[|FAILURE \[|SKIPPED$" build.log | grep -v "^\[ERROR\] *$" | head -150 || true
+            echo '```'
+          } > build-summary.md
+          cat build-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Post summary to the pull request
+        if: always() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --body-file build-summary.md
 
       - name: Step 5 - Upload coverage reports to Codecov
+        if: matrix.source == 'this-branch'
         uses: codecov/codecov-action@v4
         with:
           fail_ci_if_error: false
